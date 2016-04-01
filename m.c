@@ -16,7 +16,10 @@ typedef struct  s_app
     int         start_y;
     int         stop_left;
     int         stop_right;
+    int         dist;
     int         new_y;
+    int         block;
+    int         init_x;
 }               t_app;
 
 typedef struct      s_clone
@@ -36,7 +39,6 @@ void    ft_debug_data(t_app *app)
     fprintf(stderr, "le nombre de clones qui sortiront : %d\n", app->nb_total_clones);
     //fprintf(stderr, "0 : %d\n", app->nb_additional_elevators);
     fprintf(stderr, "le nombre d'ascenseurs présents : %d\n", app->nb_elevators);
-    fprintf(stderr, "depart y x : %d %d\n", app->start_y, app->start_x);
 }
 
 void    ft_debug_clone(t_clone *clone, t_app *app)
@@ -47,69 +49,79 @@ void    ft_debug_clone(t_clone *clone, t_app *app)
     fprintf(stderr, "tours restants : %d\n", app->nb_rounds);
     fprintf(stderr, "stop_left : %d\n", app->stop_left);
     fprintf(stderr, "stop_right : %d\n", app->stop_right);
-    fprintf(stderr, "start x y: %d %d\n", app->start_x, app->start_y);
+    fprintf(stderr, "start y x : %d %d\n", app->start_x, app->start_y);
+    fprintf(stderr, "dist max : %d\n", app->dist);
 }
 
+void    ft_set_stop_right(t_app *app, t_clone *clone)
+{
+    app->dist = abs(((app->nb_rounds - app->exit_y) / app->exit_y / 2) - app->exit_x);
+    app->stop_right = app->dist;
+    if (app->stop_right > app->map_x - 1)
+        app->stop_right = app->map_x - 1;
+    app->stop_left = 0;
+    app->new_y = 0;
+}
+ 
+void    ft_set_stop_left(t_app *app, t_clone *clone)
+{
+    app->dist = abs(((app->nb_rounds - app->exit_y) / app->exit_y / 2) - app->exit_x);
+    app->stop_left = app->dist;
+    if (app->stop_left < 0)
+        app->stop_left = 0;
+    app->stop_right = app->map_x - 1;
+    app->new_y = 0;
+}
 
-void    ft_stop(t_app *app, t_clone *clone)
+void    ft_choice(t_app *app, t_clone *clone)
 {
     if (clone->y > app->start_y)
     {
         app->start_y = clone->y;
         app->start_x = clone->x;
         app->new_y = 1;
-        fprintf(stderr, "___x: %d\n", app->start_x);
-        if ((app->nb_rounds - app->map_y) / app->map_y < app->map_y - 1)
-        {
-            app->stop_right = (app->nb_rounds - app->map_y) / app->map_y + app->start_x - 1;
-            app->stop_left =  app->start_x - ((app->nb_rounds - app->map_y) / app->map_y) + 1;
-        }
-        else
-        {
-            app->stop_right = app->map_x - 1;
-            app->stop_left = 0;
-        }
     }
-    else
-         app->new_y = 0;
-    fprintf(stderr, "dist max : %d\n", ((app->nb_rounds - app->map_y) / app->map_y) - 1);
-}
-
-void    ft_choice(t_app *app, t_clone *clone)
-{
-    ft_stop(app, clone);
     if (clone->y == -1)
         printf("WAIT\n");
-    else if (app->exit_y != clone->y)
+    else if (clone->y == app->exit_y)
     {
-        if (!strcmp(clone->direction, "LEFT") && clone->x <= app->stop_left && clone->y == app->start_y)
-        {
+        if (strcmp(clone->direction, "RIGHT") == 0 && clone->x > app->exit_x)
             printf("BLOCK\n");
-            fprintf(stderr, "BLOCK1\n");
-            app->stop_left = app->start_x;
-        }
-        else if (!strcmp(clone->direction, "RIGHT") && clone->x >= app->stop_right && clone->y == app->start_y)
-        {
+        else if (strcmp(clone->direction, "LEFT") == 0 && clone->x < app->exit_x)
             printf("BLOCK\n");
-            fprintf(stderr, "BLOCK2\n");
-            app->stop_right = app->start_x;
-        }
         else
             printf("WAIT\n");
-    } 
+    }
     else
     {
-        //if (clone->y == app->start_y && clone->x == app->start_x)
-        //    printf("WAIT\n");
-        if (app->exit_x < clone->x && strcmp(clone->direction, "RIGHT") == 0)
-            printf("BLOCK\n");
-        else if (app->exit_x > clone->x && strcmp(clone->direction, "LEFT") == 0)
-            printf("BLOCK\n");
-        else
+        app->block = 0;
+        if (strcmp(clone->direction, "RIGHT") == 0)
+        {
+            if (app->new_y && clone->y != 0)
+                ft_set_stop_right(app, clone);
+            if (clone->x >= app->stop_right && clone->y == app->start_y)
+            {
+                app->stop_right = app->start_x;
+                printf("BLOCK\n");
+                app->block = 1;
+            }
+        }
+        else if (strcmp(clone->direction, "LEFT") == 0)
+        {
+            if (app->new_y && clone->y != 0)
+                ft_set_stop_left(app, clone);
+            if (clone->x <= app->stop_left && clone->y == app->start_y)
+            {
+                app->stop_left = app->start_x;
+                printf("BLOCK\n");
+                app->block = 1;
+            }
+        }
+        if (!app->block)
             printf("WAIT\n");
-        fprintf(stderr, "BLOCK3\n");
     }
-    //app->nb_rounds--;
+    //printf("WAIT\n");
+    app->nb_rounds--;
 }
 
 void    ft_loop(t_app *app)
@@ -128,6 +140,8 @@ void    ft_loop(t_app *app)
         {
             app->start_y = clone.y;
             app->start_x = clone.x;
+            app->init_x = clone.x;
+            app->new_y = 1;
             init = 1;
         }
         ft_choice(app, &clone);
