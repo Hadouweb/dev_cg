@@ -63,6 +63,7 @@ void    ft_del_and_push(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, int nb)
 {
     int     i;
     t_lst   *l;
+    t_lst   *tmp;
 
 
     i = 0;
@@ -70,16 +71,28 @@ void    ft_del_and_push(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, int nb)
     while (i < nb && *lst1)
     {
         ft_push_back(fight_lst, (*lst1)->card, 1);
-        (*lst1) = (*lst1)->next;
+        tmp = *lst1;
+        *lst1 = (*lst1)->next;
+        free(tmp->card);
+        free(tmp);
+        tmp = NULL;
         i++;
     }
     i = 0;
     while (i < nb && *lst2)
     {
         ft_push_back(fight_lst, (*lst2)->card, 2);
-        (*lst2) = (*lst2)->next;
+        tmp = *lst2;
+        *lst2 = (*lst2)->next;
+        free(tmp->card);
+        free(tmp);
+        tmp = NULL;
         i++;
     }
+    if (*lst1 == NULL)
+        lst1 = NULL;
+    if (*lst2 == NULL)
+        lst2 = NULL;
 }
 
 int     ft_fight(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, char c[13][2])
@@ -89,8 +102,8 @@ int     ft_fight(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, char c[13][2])
     int     i;
     //ft_debug_cards(c);
     i = 0;
-    c1 = 0;
-    c2 = 0;
+    c1 = -1;
+    c2 = -1;
     while (i < 13 && *lst1 && *lst2)
     {
         if ((*lst1)->card[0] == c[i][0])
@@ -100,13 +113,18 @@ int     ft_fight(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, char c[13][2])
         i++;
     }
     ft_del_and_push(lst1, lst2, fight_lst, 1);
-    if (c1 > c2 || *lst1 && !*lst2)
+    if (c1 > c2 && c1 != -1 && c2 != -1)
         return (1);
-    else if (c1 < c2 || *lst2 && !*lst1)
+    else if (c1 < c2 && c1 != -1 && c2 != -1)
         return (2);
     else
     {
         ft_del_and_push(lst1, lst2, fight_lst, 3);
+        if (!*lst1 || !*lst2)
+        {
+            printf("PAT\n");
+            exit(1);
+        }
         ft_fight(lst1, lst2, fight_lst, c);
     }
    // fprintf(stderr, "c1 %d c2 %d\n", c1, c2);
@@ -154,12 +172,13 @@ void    ft_push_and_clear(t_lst **lst, t_lst **fight_lst)
     {
         ft_push_back(lst, fl->card, 0);
        // fprintf(stderr, "fl, %s\n", fl->card);
-        tmp = fl->next;
-        free(fl);
-        fl = NULL;
-        fl = tmp;
+        tmp = fl;
+        fl = fl->next;
+        free(tmp->card);
+        free(tmp);
+        tmp = NULL;
     }
-    *lst = l;
+    //*lst = l;
     *fight_lst = NULL;
 }
 
@@ -174,9 +193,14 @@ void    ft_loop(t_lst **lst1, t_lst **lst2, char c[13][2])
     {
         win = ft_fight(lst1, lst2, &fight_lst, c);
         if (win == 1)
+        {
             ft_push_and_clear(lst1, &fight_lst);
+        }
         else
+        {
+            ft_debug_lst(*lst2, 5);
             ft_push_and_clear(lst2, &fight_lst);
+        }
         fprintf(stderr, "winner : %d\n", win);
         ft_debug_lst(*lst1, 1);
         ft_debug_lst(*lst2, 2);
@@ -187,7 +211,7 @@ void    ft_loop(t_lst **lst1, t_lst **lst2, char c[13][2])
         printf("1 %d\n", i);
     else if (win == 2)
         printf("2 %d\n", i);
-    else if (win == 3)
+    else
         printf("PAT\n");
 }
 
