@@ -6,6 +6,7 @@ typedef struct      s_lst
 {
     char            *card;
     struct s_lst    *next;
+    int             id_list;
 }                   t_lst;
 
 void    ft_debug_cards(char c[13][2])
@@ -25,24 +26,25 @@ void    ft_debug_lst(t_lst *l, int id)
     fprintf(stderr, "Joueur %d : ", id);
     while (l)
     {
-        fprintf(stderr, "%s ", l->card);
+        fprintf(stderr, "%s[%d] ", l->card, l->id_list);
         l = l->next;
     }
     fprintf(stderr, "\n");
 }
 
-t_lst  *ft_create_node(char *card)
+t_lst  *ft_create_node(char *card, int id_list)
 {
     t_lst  *node;
 
     node = (char*)malloc(sizeof(t_lst));
     node->card = strndup(card, 2);
     node->card[1] = '\0';
+    node->id_list = id_list;
     node->next = NULL;
     return (node);
 }
 
-void    ft_push_back(t_lst **lst, char *card)
+void    ft_push_back(t_lst **lst, char *card, int id_list)
 {
     t_lst   *l;
 
@@ -51,10 +53,10 @@ void    ft_push_back(t_lst **lst, char *card)
     {
         while (l->next)
             l = l->next;
-        l->next = ft_create_node(card);
+        l->next = ft_create_node(card, id_list);
     }
     else
-        *lst = ft_create_node(card);
+        *lst = ft_create_node(card, id_list);
 }
 
 void    ft_del_and_push(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, int nb)
@@ -67,14 +69,14 @@ void    ft_del_and_push(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, int nb)
     l = *fight_lst;
     while (i < nb && *lst1)
     {
-        ft_push_back(fight_lst, (*lst1)->card);
+        ft_push_back(fight_lst, (*lst1)->card, 1);
         (*lst1) = (*lst1)->next;
         i++;
     }
     i = 0;
     while (i < nb && *lst2)
     {
-        ft_push_back(fight_lst, (*lst2)->card);
+        ft_push_back(fight_lst, (*lst2)->card, 2);
         (*lst2) = (*lst2)->next;
         i++;
     }
@@ -110,19 +112,47 @@ int     ft_fight(t_lst **lst1, t_lst **lst2, t_lst **fight_lst, char c[13][2])
    // fprintf(stderr, "c1 %d c2 %d\n", c1, c2);
 }
 
+void    ft_sort_fight_list(t_lst **fight_lst, t_lst **l)
+{
+    t_lst   *fl;
+    t_lst   *tmp;
+
+    fl = *fight_lst;
+    while (fl)
+    {
+        if (fl->id_list == 1)
+            ft_push_back(l, fl->card, 0);
+        fl = fl->next;
+    }
+    fl = *fight_lst;
+    while (fl)
+    {
+        if (fl->id_list == 2)
+            ft_push_back(l, fl->card, 0);
+        tmp = fl;
+        fl = fl->next;
+        free(tmp->card);
+        free(tmp);
+        tmp = NULL;
+    }
+}
+
 void    ft_push_and_clear(t_lst **lst, t_lst **fight_lst)
 {
     t_lst   *fl;
     t_lst   *l;
     t_lst   *tmp;
+    t_lst   *new_fl;
 
-    fl = *fight_lst;
     l = *lst;
     tmp = NULL;
-    ft_debug_lst(*fight_lst, 3);
+    new_fl = NULL;
+    ft_sort_fight_list(fight_lst, &new_fl);
+    fl = new_fl;
+    ft_debug_lst(fl, 3);
     while (fl)
     {
-        ft_push_back(lst, fl->card);
+        ft_push_back(lst, fl->card, 0);
        // fprintf(stderr, "fl, %s\n", fl->card);
         tmp = fl->next;
         free(fl);
@@ -176,13 +206,13 @@ int     main()
     for (int i = 0; i < n; i++) {
         char cardp1[2]; // the n cards of player 1
         scanf("%s", cardp1);
-        ft_push_back(&lst1, cardp1);
+        ft_push_back(&lst1, cardp1, 1);
     }
     scanf("%d", &m);
     for (int i = 0; i < m; i++) {
         char cardp2[2]; // the m cards of player 2
         scanf("%s", cardp2);
-        ft_push_back(&lst2, cardp2);
+        ft_push_back(&lst2, cardp2, 2);
     }
     ft_debug_lst(lst1, 1);
     ft_debug_lst(lst2, 2);
